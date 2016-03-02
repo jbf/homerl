@@ -10,7 +10,7 @@
 -export([handle_call/3, handle_cast/2]).
 -export([code_change/3]).
 
--record(state, {port, err_log, log}).
+-record(state, {port, err_log, raw_log, outfile}).
 
 start_link() ->
     gen_server:start_link(?MODULE, [], []).
@@ -23,24 +23,30 @@ init(_Args) ->
     Executable = code:priv_dir(?MODULE) ++ "/" ++ Binary,
     {ok, Dir} = application:get_env(?MODULE, data_dir),
     {ok, Errlog} = file:open(Dir ++ "/err.log", [write]),
-    {ok, Log2} = file:open(Dir ++ "/out.txt", [append]),
     {ok, Log} = file:open(Dir ++ "/raw.txt", [append]),
+    {ok, Log2} = file:open(Dir ++ "/out.txt", [append]),
     Port = open_port({spawn_executable, Executable}, [{packet, 2}]),
     case erlang:port_info(Port) of
         undefined -> {stop, can_not_open_port};
         _ ->
-            State = #state{port = Port, err_log = Errlog, log = {Log2, Log}},
+            State = #state{port = Port,
+                           err_log = Errlog,
+                           raw_log = Log,
+                           outfile = Log2},
             {ok, State}
     end.
 
 terminate({port_terminated, _Reason}, _State) ->
     ok;
-terminate(_Reason, _State = #state{port=Port, err_log = Errlog, log = {Log2, Log}}) ->
+terminate(_Reason, _State = #state{port=Port,
+                                   err_log = Errlog,
+                                   raw_log = Raw,
+                                   outfile = Out}) ->
     % loop here until port is closed
     Port ! {self(), close},
     term(1, Port),
-    file:close(Log),
-    file:close(Log2),
+    file:close(Out),
+    file:close(Raw),
     file:close(Errlog),
     ok.
 
@@ -57,14 +63,16 @@ term(Count, Port) ->
             ok
     end.
 
-handle_info({Port, {data, Data}}, State = #state{port=Port, log={Log2, Log}}) ->
+handle_info({Port, {data, Data}}, State = #state{port=Port,
+                                                 outfile=Out,
+                                                 raw_log=Raw}) ->
     Decoded = decode(Data),
+    io:format(Raw, "~p~n", [Decoded]),
     {DeviceId, _DataType, _Value, _TimeStamp} = Decoded,
     case sensor_directory:blacklisted_sensor(DeviceId) of
         true -> {noreply, State};
         _    ->
-            io:format(Log, "~p~n", [Decoded]),
-            pretty_print(Log2, Decoded),
+            pretty_print(Out, Decoded),
             {noreply, State}
     end;
 handle_info({'EXIT', Port, Reason}, State = #state{port=Port}) ->
