@@ -6,5 +6,6 @@
   {applications, [kernel, stdlib, sensor_directory]},
   {mod, {data_logger_app, []}},
   {env, [{data_dir, "data"},
-         {binary, "csensor"}]}
+         {binary, "csensor"}]},
+         {start_yaws, false}
  ]}.
