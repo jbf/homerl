@@ -19,3 +19,5 @@ relx
 env.mk
 *.d
 priv/csensor
+deps/
+.erlang.mk
