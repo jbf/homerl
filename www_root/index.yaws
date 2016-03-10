@@ -1,0 +1,12 @@
+<html>
+<head>
+</head>
+<body>
+    <h1>Data</h1>
+    <erl>
+    out(Arg) ->
+        SensorData = io_lib:format("~p", [calendar:universal_time()]),
+        [{html, SensorData}, {html, "<p>some data!"}].
+    </erl>
+</body>
+</html>

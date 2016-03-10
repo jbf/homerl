@@ -18,7 +18,7 @@ start(_Type, _StartArgs) ->
 maybe_start_yaws({ok, false}) -> ok;
 maybe_start_yaws({ok, true}) ->
     yaws:start_embedded(get_yaws_dir(),
-                        [servername(), listen()]).
+                        [servername(), listen(), port()]).
 
 get_yaws_dir() ->
     {ok, Dir} = application:get_env(data_logger, yaws_www_root),
@@ -32,6 +32,10 @@ servername() ->
 listen() ->
     {ok, Ret} = application:get_env(data_logger, yaws_listen),
     {listen, Ret}.
+
+port() ->
+    {ok, Port} = application:get_env(data_logger, yaws_port),
+    {port, Port}.
 
 stop(_State) ->
     ok.
