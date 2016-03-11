@@ -3,7 +3,7 @@
   {vsn, "0.1.0"},
   {modules, []},
   {registered, [data_logger_sup]},
-  {applications, [kernel, stdlib, sensor_directory]},
+  {applications, [kernel, stdlib, sensor_directory, data_store]},
   {mod, {data_logger_app, []}},
   {env, [{data_dir, "data"},
          {binary, "csensor"}]},

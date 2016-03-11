@@ -1,0 +1,11 @@
+{application, data_store,
+ [{description, "Data store"},
+  {vsn, "0.1.0"},
+  {modules, []},
+  {registered, [data_store_sup]},
+  {applications, [kernel, stdlib, sensor_directory]},
+  {mod, {data_store_app, []}},
+  {env, [
+            {keep, 86400} %sec
+        ]}
+ ]}.
