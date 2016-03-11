@@ -4,7 +4,7 @@
 
 %% API
 -export([start_link/1, start_link/0, start/1,
-         start/0, stop/0
+         start/0, stop/0, add_data/1
         ]).
 
 %% gen_server Callback
@@ -30,10 +30,22 @@ start() ->
 stop() ->
     gen_server:cast(?SERVER, stop).
 
+add_data(DataPoint) ->
+    gen_server:cast(?SERVER, {add_data, DataPoint}).
+
 init([]) ->
     %Tab = ets:new(sensor_dir_table, [{keypos,2}]),
-    {ok, #state{tabs=[]}}.
+    {ok, #state{tabs=orddict:new()}}.
 
+handle_cast({add_data, {Sensor, Type, _Value, _Time}}, State) ->
+    Dict = State#state.tabs,
+    {_Bucket, NewState} = case orddict:find({Sensor, Type}, Dict) of
+                 {ok, Bkt} -> {Bkt, State};
+                 error -> NewBucket = [],
+                          NewDict = orddict:store({Sensor, Type}, NewBucket, Dict),
+                          {NewBucket, State#state{tabs=NewDict}}
+                         end,
+    {noreply, NewState};
 handle_cast(stop, State) ->
     {stop, normal, State}.
 

@@ -66,47 +66,19 @@ term(Count, Port) ->
 handle_info({Port, {data, Data}}, State = #state{port=Port,
                                                  outfile=Out,
                                                  raw_log=Raw}) ->
-    Decoded = decode(Data),
+    Decoded = data_util:decode(Data),
     io:format(Raw, "~p~n", [Decoded]),
     {DeviceId, _DataType, _Value, _TimeStamp} = Decoded,
     case sensor_directory:blacklisted_sensor(DeviceId) of
         true -> {noreply, State};
         _    ->
-            pretty_print(Out, Decoded),
+            data_store:add_data(Decoded),
+            Formatted = data_util:format(Decoded),
+            data_util:pretty_print(Out, Formatted),
             {noreply, State}
     end;
 handle_info({'EXIT', Port, Reason}, State = #state{port=Port}) ->
     {stop, {port_terminated, Reason}, State}.
-
-decode(Data) ->
-    {ok, Tokens, _} = erl_scan:string(Data),
-    {ok, Ret} = erl_parse:parse_term(Tokens),
-    Ret.
-
-pretty_print(To, {DeviceId, DataType, Value, TimeStamp}) ->
-    {ok, {sensor, DeviceId, _}} = sensor_directory:get_sensor(DeviceId),
-    Time = timestamp_to_datestring(TimeStamp),
-    Unit = case DataType of
-        h -> "%";
-        t -> "C";
-        _ -> ""
-    end,
-    DataType2 = case DataType of
-        h -> humidity;
-        t -> temperature;
-        X -> X
-    end,
-    io:format(To, "~s device=~p, value=~p~s, type=~p~n",
-              [Time, DeviceId, Value, Unit, DataType2]),
-    ok.
-
-timestamp_to_datestring(TimeStamp) ->
-    SecToEpoch = 62167219200,
-    TotalSec = SecToEpoch + TimeStamp,
-    {{Year, Month, Day}, {Hour, Minute, Second}} =
-      calendar:gregorian_seconds_to_datetime(TotalSec),
-    io_lib:format("~B-~2.10.0B-~2.10.0B ~2.10.0B:~2.10.0B.~2.10.0B",
-      [Year, Month, Day, Hour, Minute, Second]).
 
 handle_cast('###crash_me', State) ->
     {noreply, State};
