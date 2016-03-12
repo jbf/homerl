@@ -14,6 +14,8 @@
 -define(SERVER, ?MODULE).
 
 -record(state, {tabs}).
+-record(bucket, {timestamp,
+                 tab}).
 
 start_link(Args) ->
     gen_server:start_link({local, ?SERVER}, ?MODULE, Args, []).
@@ -38,27 +40,46 @@ get_data(Key) ->
 
 init([]) ->
     %Tab = ets:new(sensor_dir_table, [{keypos,2}]),
-    {ok, #state{tabs=orddict:new()}}.
+    {ok, #state{tabs=make_buckets()}}.
+
+make_buckets() -> orddict:new().
 
 handle_cast({add_data, Data = {Sensor, Type, _Value, _Time}}, State) ->
     Buckets = State#state.tabs,
-    OldBucket = get_or_create_bucket({Sensor, Type}, Buckets),
+    Key = {Sensor, Type},
+    OldBucket = get_bucket(Key, Buckets),
     NewBucket = bucket_add_data(OldBucket, Data),
-    NewBuckets = store_bucket(Buckets, {Sensor, Type}, NewBucket),
+    NewBuckets = store_bucket(Buckets, Key, NewBucket),
     NewState = State#state{tabs=NewBuckets},
     {noreply, NewState};
 handle_cast(stop, State) ->
     {stop, normal, State}.
 
-get_or_create_bucket(Key, Buckets) ->
+get_bucket(Key, Buckets) ->
     Bucket = orddict:find(Key, Buckets),
     case Bucket of
-        error -> [];
+        error -> empty;
         {ok, B} -> B
     end.
 
 bucket_add_data(OldBucket, Data) ->
-    [Data | OldBucket].
+    case OldBucket of
+        #bucket{tab = T} -> add_maybe_gc(T, Data),
+                            OldBucket;
+        empty ->
+            new_bucket_with_data(Data)
+    end.
+
+add_maybe_gc(T, Data) ->
+    _Size = ets:info(T, size),
+    %TODO: add gc here
+    ets:insert(T, Data).
+
+new_bucket_with_data(Data = {Id, T, _V, TimeStamp}) ->
+    TabStr = "bucket_tab_" ++ integer_to_list(Id) ++ "_" ++ atom_to_list(T),
+    Tab = ets:new(list_to_atom(TabStr), [ordered_set, {keypos, 4}]),
+    ets:insert(Tab, Data),
+    #bucket{timestamp = TimeStamp, tab = Tab}.
 
 store_bucket(Buckets, Key, Bucket) ->
     orddict:store(Key, Bucket, Buckets).
@@ -73,7 +94,8 @@ handle_call({get_data, Key}, _From, State = #state{tabs = T}) ->
 handle_call(_Unknown, _From, State) ->
     {reply, ok, State}.
 
-get_data2(Bucket) -> Bucket.
+get_data2(#bucket{tab = T}) ->
+    ets:tab2list(T).
 
 handle_info(_Unknown, State) ->
     {noreply, State}.
