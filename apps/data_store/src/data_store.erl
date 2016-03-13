@@ -39,7 +39,6 @@ get_data(Key) ->
     gen_server:call(?SERVER, {get_data, Key}).
 
 init([]) ->
-    %Tab = ets:new(sensor_dir_table, [{keypos,2}]),
     {ok, #state{tabs=make_buckets()}}.
 
 make_buckets() -> orddict:new().
@@ -71,9 +70,15 @@ bucket_add_data(OldBucket, Data) ->
     end.
 
 add_maybe_gc(T, Data) ->
-    _Size = ets:info(T, size),
-    %TODO: add gc here
+    Size = ets:info(T, size),
+    GC_Threshold = gc_threshold(),
+    if
+        Size >= GC_Threshold -> ?SERVER ! {gc, T};
+        true -> ok
+    end,
     ets:insert(T, Data).
+
+gc_threshold() -> 100000.
 
 new_bucket_with_data(Data = {Id, T, _V, TimeStamp}) ->
     TabStr = "bucket_tab_" ++ integer_to_list(Id) ++ "_" ++ atom_to_list(T),
@@ -97,8 +102,31 @@ handle_call(_Unknown, _From, State) ->
 get_data2(#bucket{tab = T}) ->
     ets:tab2list(T).
 
+handle_info({gc, Tab}, State) ->
+    run_gc(Tab, gc_threshold()),
+    {noreply, State};
 handle_info(_Unknown, State) ->
     {noreply, State}.
+
+run_gc(Tab, GC_Threshold) ->
+    InitialSize = ets:info(Tab, size),
+    ToDelete = GC_Threshold * gc_free_ratio(),
+    Key = ets:first(Tab),
+    run_gc_inner(Tab, Key, ToDelete),
+    EndSize = ets:info(Tab, size),
+    io:format("GC done, deleted ~p items, ", [InitialSize-EndSize]),
+    io:format("new size: ~p~n", [EndSize]),
+    ok.
+
+run_gc_inner(_Tab, _Key, I) when I =< 0 -> ok;
+run_gc_inner(Tab, CurrentKey, NumToDelete) ->
+    ets:delete(Tab, CurrentKey),
+    NextKey = ets:next(Tab, CurrentKey),
+    Rem = NumToDelete - 1,
+    run_gc_inner(Tab, NextKey, Rem).
+
+
+gc_free_ratio() -> 0.35.
 
 terminate(_Reason, _State) ->
     ok.
