@@ -78,7 +78,7 @@ add_maybe_gc(T, Data) ->
     end,
     ets:insert(T, Data).
 
-gc_threshold() -> 100000.
+gc_threshold() -> 10000.
 
 new_bucket_with_data(Data = {Id, T, _V, TimeStamp}) ->
     TabStr = "bucket_tab_" ++ integer_to_list(Id) ++ "_" ++ atom_to_list(T),
