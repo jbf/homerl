@@ -4,11 +4,17 @@
 
 <erl>
     out(Arg) ->
-        TempRawData = data_store:get_data({135,t}),
+        QueryVar = yaws_api:queryvar(Arg, "sensor"),
+        Id = case QueryVar of
+                 {ok, Sid} -> list_to_integer(Sid);
+                 Tuple when is_tuple(Tuple) -> list_to_integer(element(1, Tuple));
+                 _ -> 0
+             end,
+        TempRawData = data_store:get_data({Id,t}),
         Temps = [io_lib:format("[~p,~p]", [T, D]) || {_, _, D ,T} <- TempRawData],
         Temp = string:join(Temps, ","),
 
-        HumRawData = data_store:get_data({135,h}),
+        HumRawData = data_store:get_data({Id,h}),
         Hums = [io_lib:format("[~p,~p]", [T, D]) || {_, _, D ,T} <- HumRawData],
         Hum = string:join(Hums, ","),
 
@@ -18,7 +24,7 @@
 </erl>
 
 <script type="text/javascript">
-      google.charts.load('current', {'packages':['corechart']});
+      google.charts.load('current', {'packages':['corechart'], 'language':'sv'});
       google.charts.setOnLoadCallback(drawChart);
 
       function drawChart() {
@@ -29,7 +35,6 @@
 
         var options = {
           title: 'Temperature',
-          curveType: 'function',
           legend: { position: 'bottom' }
         };
 
@@ -55,8 +60,14 @@
 
         var options = {
           title: 'Humidity',
-          curveType: 'function',
-          legend: { position: 'bottom' }
+          legend: { position: 'bottom' },
+          vAxis: {
+              viewWindowMode:'explicit',
+              viewWindow:{
+                max:105,
+                min:0
+              }
+            }
         };
 
         var hum_chart = new google.visualization.LineChart(document.getElementById('hum_chart'));
@@ -75,7 +86,16 @@
     </script>
 </head>
 <body>
-    <h1>Data</h1>
+<erl>
+    out(Arg) ->
+        QueryVar = yaws_api:queryvar(Arg, "sensor"),
+        Id = case QueryVar of
+                 {ok, Sid} -> Sid;
+                 Tuple when is_tuple(Tuple) -> element(1, Tuple);
+                 _ -> "unkown sensor"
+             end,
+        {html, "<h1>Sensor: " ++ Id ++ "</h1>"}.
+</erl>
     <div id="temp_chart" style="width: 900px; height: 500px"></div>
     <div id="hum_chart" style="width: 900px; height: 500px"></div>
 </body>
