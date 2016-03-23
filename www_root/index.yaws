@@ -35,7 +35,9 @@
 
         var options = {
           title: 'Temperature',
-          legend: { position: 'bottom' }
+          legend: { position: 'bottom' },
+          colors: ['red'],
+          vAxis: { minValue: 10 }
         };
 
         var temp_chart = new google.visualization.LineChart(document.getElementById('temp_chart'));
