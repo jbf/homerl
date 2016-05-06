@@ -67,6 +67,7 @@ handle_info({Port, {data, Data}}, State = #state{port=Port,
     case sensor_directory:blacklisted_sensor(DeviceId) of
         true -> {noreply, State};
         _    ->
+            sensor_directory:get_sensor(DeviceId),
             data_store:add_data(Decoded),
             {noreply, State}
     end;
