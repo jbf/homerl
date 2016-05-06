@@ -1,104 +1,19 @@
-<html>
-<head>
-<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
-
-<erl>
-    out(Arg) ->
-        QueryVar = yaws_api:queryvar(Arg, "sensor"),
-        Id = case QueryVar of
-                 {ok, Sid} -> list_to_integer(Sid);
-                 Tuple when is_tuple(Tuple) -> list_to_integer(element(1, Tuple));
-                 _ -> 0
-             end,
-        TempRawData = data_store:get_data({Id,t}),
-        Temps = [io_lib:format("[~p,~p]", [T, D]) || {_, _, D ,T} <- TempRawData],
-        Temp = string:join(Temps, ","),
-
-        HumRawData = data_store:get_data({Id,h}),
-        Hums = [io_lib:format("[~p,~p]", [T, D]) || {_, _, D ,T} <- HumRawData],
-        Hum = string:join(Hums, ","),
-
-        Out = "<script type=\"text/javascript\">\nvar temp_data_t = [\n" ++
-            Temp ++ "\n];\nvar hum_data_t = [" ++ Hum ++ "\n];\n</script>",
-        {html, Out}.
-</erl>
-
-<script type="text/javascript">
-      google.charts.load('current', {'packages':['corechart'], 'language':'sv'});
-      google.charts.setOnLoadCallback(drawChart);
-
-      function drawChart() {
-        var temp_data = new google.visualization.DataTable();
-        temp_data.addColumn('number', 'Date');
-        temp_data.addColumn('number', 'Temperature');
-        temp_data.addRows(temp_data_t);
-
-        var options = {
-          title: 'Temperature',
-          legend: { position: 'bottom' },
-          colors: ['red'],
-          vAxis: { minValue: 10 }
-        };
-
-        var temp_chart = new google.visualization.LineChart(document.getElementById('temp_chart'));
-
-        var temp_view = new google.visualization.DataView(temp_data);
-        temp_view.setColumns([{
-               type: 'datetime',
-               label: temp_data.getColumnLabel(0),
-               calc: function(dt, row) {
-                         return new Date(dt.getValue(row, 0) * 1000);
-                         }
-        }, 1]);
-
-        temp_chart.draw(temp_view, options);
-
-        // Next chart
-
-        var hum_data = new google.visualization.DataTable();
-        hum_data.addColumn('number', 'Date');
-        hum_data.addColumn('number', 'Humidity');
-        hum_data.addRows(hum_data_t);
-
-        var options = {
-          title: 'Humidity',
-          legend: { position: 'bottom' },
-          vAxis: {
-              viewWindowMode:'explicit',
-              viewWindow:{
-                max:105,
-                min:0
-              }
-            }
-        };
-
-        var hum_chart = new google.visualization.LineChart(document.getElementById('hum_chart'));
-
-        var hum_view = new google.visualization.DataView(hum_data);
-        hum_view.setColumns([{
-               type: 'datetime',
-               label: hum_data.getColumnLabel(0),
-               calc: function(dt, row) {
-                         return new Date(dt.getValue(row, 0) * 1000);
-                         }
-        }, 1]);
-
-        hum_chart.draw(hum_view, options);
-      }
-    </script>
 </head>
 <body>
+<h1>Sensors</h1>
 <erl>
     out(Arg) ->
-        QueryVar = yaws_api:queryvar(Arg, "sensor"),
-        Id = case QueryVar of
-                 {ok, Sid} -> Sid;
-                 Tuple when is_tuple(Tuple) -> element(1, Tuple);
-                 _ -> "unkown sensor"
-             end,
-        {html, "<h1>Sensor: " ++ Id ++ "</h1>"}.
+        Sensors = sensor_directory:get_sensors(),
+        {html, ["<table>",
+                ["<tr><td><a href=/sensor.yaws?id=" ++
+                 integer_to_list(Id) ++
+                 ">" ++
+                 integer_to_list(Id) ++
+                 ", " ++
+                 atom_to_list(Type) ++
+                 "</a></td></tr>\n" || {_, Id, Type} <- Sensors],
+               "</table>"]}.
 </erl>
-    <div id="temp_chart" style="width: 900px; height: 500px"></div>
-    <div id="hum_chart" style="width: 900px; height: 500px"></div>
+
 </body>
 </html>

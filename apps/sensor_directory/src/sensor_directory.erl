@@ -5,7 +5,7 @@
 %% API
 -export([start_link/1, start_link/0, start/1,
          start/0, stop/0, get_sensor/1,
-         blacklisted_sensor/1
+         blacklisted_sensor/1, get_sensors/0
         ]).
 
 %% gen_server Callback
@@ -31,6 +31,9 @@ start() ->
 stop() ->
     gen_server:cast(?SERVER, stop).
 
+get_sensors() ->
+    gen_server:call(?SERVER, {get_sensors}).
+
 get_sensor(SensorId) ->
     gen_server:call(?SERVER, {get_sensor, SensorId}).
 
@@ -53,8 +56,12 @@ handle_call({get_sensor, SensorId}, _From, State) ->
             lookup_no_update(Tab, SensorId, State);
         [Sensor] -> {reply, {ok, Sensor}, State}
     end;
+
 handle_call({get_blacklist}, _From, State=#state{tab=_, blacklist=Blacklist}) ->
-    {reply, Blacklist, State}.
+    {reply, Blacklist, State};
+
+handle_call({get_sensors}, _From, State=#state{tab=Tab}) ->
+    {reply, ets:select(Tab, [{{sensor, '$0', '$1'},[], ['$_']}]), State}.
 
 lookup_no_update(Tab, SensorId, State) ->
     Res = ets:lookup(Tab, SensorId),
