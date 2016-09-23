@@ -19,6 +19,7 @@ stop(Ref) ->
     gen_server:cast(Ref, stop).
 
 init(_Args) ->
+    process_flag(trap_exit, true),
     {ok, Binary} = application:get_env(?MODULE, binary),
     Executable = code:priv_dir(?MODULE) ++ "/" ++ Binary,
     {ok, Dir} = application:get_env(?MODULE, data_dir),
