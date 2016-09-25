@@ -2,7 +2,7 @@
  [{description, "Directory of sensors attached to tellstick"},
   {vsn, "0.1.0"},
   {modules, []},
-  {registered, [sens_dir_sup]},
+  {registered, [sensor_directory, sens_dir_sup]},
   {applications, [kernel, stdlib]},
   {mod, {sens_dir_app, []}},
   {env, [{blacklisted_sensors, []}]}

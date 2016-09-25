@@ -2,6 +2,8 @@
 
 -behaviour(gen_server).
 
+-compile({parse_transform, lager_transform}).
+
 %% API
 -export([start_link/1, start_link/0, start/1,
          start/0, stop/0, add_data/1, get_data/1
@@ -112,10 +114,10 @@ run_gc(Tab, GC_Threshold) ->
     InitialSize = ets:info(Tab, size),
     ToDelete = GC_Threshold * gc_free_ratio(),
     Key = ets:first(Tab),
-    run_gc_inner(Tab, Key, ToDelete),
+    ok = run_gc_inner(Tab, Key, ToDelete),
     EndSize = ets:info(Tab, size),
-    io:format("GC done, deleted ~p items, ", [InitialSize-EndSize]),
-    io:format("new size: ~p~n", [EndSize]),
+    lager:info("GC done, deleted ~p items, ", [InitialSize-EndSize]),
+    lager:info("new size: ~p~n", [EndSize]),
     ok.
 
 run_gc_inner(_Tab, _Key, I) when I =< 0 -> ok;
@@ -124,7 +126,6 @@ run_gc_inner(Tab, CurrentKey, NumToDelete) ->
     NextKey = ets:next(Tab, CurrentKey),
     Rem = NumToDelete - 1,
     run_gc_inner(Tab, NextKey, Rem).
-
 
 gc_free_ratio() -> 0.35.
 
