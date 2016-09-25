@@ -60,8 +60,11 @@ handle_call({get_sensor, SensorId}, _From, State) ->
 handle_call({get_blacklist}, _From, State=#state{tab=_, blacklist=Blacklist}) ->
     {reply, Blacklist, State};
 
-handle_call({get_sensors}, _From, State=#state{tab=Tab}) ->
-    {reply, ets:select(Tab, [{{sensor, '$0', '$1'},[], ['$_']}]), State}.
+handle_call({get_sensors}, _From, State=#state{tab=Tab, blacklist=Blacklist}) ->
+    All = ets:select(Tab, [{{sensor, '$0', '$1'},[], ['$_']}]),
+    NonBlacklist = [X || X = {_Sensor, Id, _Capability} <- All,
+                         false =:= lists:member(Id, Blacklist) ],
+    {reply, NonBlacklist, State}.
 
 lookup_no_update(Tab, SensorId, State) ->
     Res = ets:lookup(Tab, SensorId),
@@ -91,4 +94,3 @@ terminate(_Reason, _State) ->
 
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
-

@@ -1,15 +1,41 @@
-<html>
-<head>
-<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+-module(sensor_handler).
+-behaviour(cowboy_http_handler).
 
-<erl>
-    out(Arg) ->
-        QueryVar = yaws_api:queryvar(Arg, "id"),
-        Id = case QueryVar of
-                 {ok, Sid} -> list_to_integer(Sid);
-                 Tuple when is_tuple(Tuple) -> list_to_integer(element(1, Tuple));
-                 _ -> 0
-             end,
+-export([init/3]).
+-export([handle/2]).
+-export([terminate/3]).
+
+-record(state, {
+}).
+
+init(_, Req, _Opts) ->
+	{ok, Req, #state{}}.
+
+handle(Req, State=#state{}) ->
+        {QsVal, Req2} = cowboy_req:qs_val(<<"id">>, Req),
+	{ok, Req3} = cowboy_req:reply(200, [
+                {<<"content-type">>, <<"text/html; charset=utf-8">>},
+                {<<"server">>, <<"yaws">>}
+            ],
+            [
+                 "<html><head>",
+                 include(),
+                 raw_data(QsVal),
+                 script(),
+                 "</head><body>",
+                 "<h1>Sensor: ", QsVal, "</h1>",
+                 "<div id='temp_chart' style='width: 900px; height: 500px'></div>",
+                 "<div id='hum_chart' style='width: 900px; height: 500px'></div>",
+                 "</body></html>"
+            ],
+            Req2),
+	{ok, Req3, State}.
+
+include() ->
+   "<script type='text/javascript' src='https://www.gstatic.com/charts/loader.js'></script>".
+
+raw_data(QueryId) ->
+        Id = id_to_integer(QueryId),
         TempRawData = data_store:get_data({Id,t}),
         Temps = [io_lib:format("[~p,~p]", [T, D]) || {_, _, D ,T} <- TempRawData],
         Temp = string:join(Temps, ","),
@@ -18,12 +44,14 @@
         Hums = [io_lib:format("[~p,~p]", [T, D]) || {_, _, D ,T} <- HumRawData],
         Hum = string:join(Hums, ","),
 
-        Out = "<script type=\"text/javascript\">\nvar temp_data_t = [\n" ++
-            Temp ++ "\n];\nvar hum_data_t = [" ++ Hum ++ "\n];\n</script>",
-        {html, Out}.
-</erl>
+        "<script type=\"text/javascript\">\nvar temp_data_t = [\n" ++
+            Temp ++ "\n];\nvar hum_data_t = [" ++ Hum ++ "\n];\n</script>".
 
-<script type="text/javascript">
+id_to_integer(Bin) when is_binary(Bin) -> binary_to_integer(Bin);
+id_to_integer([_] = Id) -> list_to_integer(Id).
+
+script() ->
+"<script type='text/javascript'>
       google.charts.load('current', {'packages':['corechart'], 'language':'sv'});
       google.charts.setOnLoadCallback(drawChart);
 
@@ -85,20 +113,7 @@
 
         hum_chart.draw(hum_view, options);
       }
-    </script>
-</head>
-<body>
-<erl>
-    out(Arg) ->
-        QueryVar = yaws_api:queryvar(Arg, "id"),
-        Id = case QueryVar of
-                 {ok, Sid} -> Sid;
-                 Tuple when is_tuple(Tuple) -> element(1, Tuple);
-                 _ -> "unkown sensor"
-             end,
-        {html, "<h1>Sensor: " ++ Id ++ "</h1>"}.
-</erl>
-    <div id="temp_chart" style="width: 900px; height: 500px"></div>
-    <div id="hum_chart" style="width: 900px; height: 500px"></div>
-</body>
-</html>
+    </script>".
+
+terminate(_Reason, _Req, _State) ->
+	ok.
