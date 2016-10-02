@@ -81,6 +81,7 @@ update_directory(Tab) ->
     Input = decode(Undecoded),
     ets:insert(Tab, Input).
 
+%%% TODO: Use library decode
 decode(Data) ->
     {ok, Tokens, _} = erl_scan:string(Data),
     {ok, Ret} = erl_parse:parse_term(Tokens),
