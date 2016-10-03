@@ -14,7 +14,7 @@
 
 -define(SERVER, ?MODULE).
 
--record(state, {tab, blacklist}).
+-record(state, {tab, blacklist, whitelist}).
 
 start_link(Args) ->
     gen_server:start_link({local, ?SERVER}, ?MODULE, Args, []).
@@ -43,7 +43,8 @@ blacklisted_sensor(SensorId) ->
 init([]) ->
     Tab = ets:new(sensor_dir_table, [{keypos,2}]),
     Blacklist = application:get_env(?MODULE, blacklisted_sensors, []),
-    {ok, #state{tab=Tab, blacklist=Blacklist}}.
+    Whitelist = application:get_env(?MODULE, whitelisted_sensors, []),
+    {ok, #state{tab=Tab, blacklist=Blacklist, whitelist=Whitelist}}.
 
 handle_cast(stop, State) ->
     {stop, normal, State}.
@@ -57,14 +58,21 @@ handle_call({get_sensor, SensorId}, _From, State) ->
         [Sensor] -> {reply, {ok, Sensor}, State}
     end;
 
-handle_call({get_blacklist}, _From, State=#state{tab=_, blacklist=Blacklist}) ->
+handle_call({get_blacklist}, _From, State=#state{blacklist=Blacklist}) ->
     {reply, Blacklist, State};
+handle_call({get_whitelist}, _From, State=#state{whitelist=Whitelist}) ->
+    {reply, Whitelist, State};
 
-handle_call({get_sensors}, _From, State=#state{tab=Tab, blacklist=Blacklist}) ->
+handle_call({get_sensors},
+            _From,
+            State=#state{tab=Tab,blacklist=Blacklist, whitelist=Whitelist}) ->
     All = ets:select(Tab, [{{sensor, '$0', '$1'},[], ['$_']}]),
-    NonBlacklist = [X || X = {_Sensor, Id, _Capability} <- All,
-                         false =:= lists:member(Id, Blacklist) ],
-    {reply, NonBlacklist, State}.
+    case Whitelist of
+        [] -> {reply, [X || X = {_Sensor, Id, _Capability} <- All,
+                false =:= lists:member(Id, Blacklist) ], State};
+        _  -> {reply, [X || X = {_Sensor, Id, _Cap} <- All,
+                true == lists:member(Id, Whitelist) ], State}
+    end.
 
 lookup_no_update(Tab, SensorId, State) ->
     Res = ets:lookup(Tab, SensorId),
