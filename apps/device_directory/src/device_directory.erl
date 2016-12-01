@@ -5,7 +5,7 @@
 
 %% API.
 -export([start_link/0]).
--export([list_devices/1]).
+-export([list_devices/0]).
 
 %% gen_server.
 -export([init/1]).
@@ -17,15 +17,17 @@
 
 -record(state, {devices}).
 
+-define(SERVER, ?MODULE).
+
 %% API.
 
 -spec start_link() -> {ok, pid()}.
 start_link() ->
-  gen_server:start_link(?MODULE, [], []).
+  gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
 
--spec list_devices(pid()) -> [_].
-list_devices(Pid) ->
-  gen_server:call(Pid, list_devices).
+-spec list_devices() -> [_].
+list_devices() ->
+  gen_server:call(?SERVER, list_devices).
 
 %% gen_server.
 
