@@ -8,5 +8,5 @@ start_link() ->
   supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
 init([]) ->
-  Procs = [],
+  Procs = [device_directory],
   {ok, {{one_for_one, 1, 5}, Procs}}.
