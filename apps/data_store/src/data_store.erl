@@ -72,13 +72,19 @@ bucket_add_data(OldBucket, Data) ->
     end.
 
 add_maybe_gc(T, Data) ->
+    case should_run_gc(T) of
+        true -> ?SERVER ! {gc, T};
+        _ -> ok
+    end,
+    ets:insert(T, Data).
+
+should_run_gc(T) ->
     Size = ets:info(T, size),
     GC_Threshold = gc_threshold(),
     if
-        Size >= GC_Threshold -> ?SERVER ! {gc, T};
-        true -> ok
-    end,
-    ets:insert(T, Data).
+        Size >= GC_Threshold -> true;
+        _ -> false
+    end.
 
 gc_threshold() -> 10000.
 
@@ -105,7 +111,11 @@ get_data2(#bucket{tab = T}) ->
     ets:tab2list(T).
 
 handle_info({gc, Tab}, State) ->
-    run_gc(Tab, gc_threshold()),
+    % We might have done this already
+    case should_run_gc(Tab) of
+        true -> run_gc(Tab, gc_threshold());
+        _    -> ok
+    end,
     {noreply, State};
 handle_info(_Unknown, State) ->
     {noreply, State}.
