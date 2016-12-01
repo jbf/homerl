@@ -83,7 +83,7 @@ should_run_gc(T) ->
     GC_Threshold = gc_threshold(),
     if
         Size >= GC_Threshold -> true;
-        _ -> false
+        true -> false
     end.
 
 gc_threshold() -> 10000.
