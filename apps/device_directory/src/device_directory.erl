@@ -64,7 +64,7 @@ decode(Data) ->
 parse_devices() -> decode(get_devices()).
 
 get_devices() ->
-  CMD = "tdtool --list-devices | awk 'BEGIN {FS=\" |=|\\t\"} NR == 1 {printf(\"[ \")} NR > 1 {printf(\"\\n ,\")}{printf(\" {device, %s, \\\"%s\\\"}\", $4,$6)} END {printf(\" ].\\n\")}'",
+  CMD = "tdtool --list-devices | awk 'BEGIN {FS=\" |=|\\t\"} NR == 1 {printf(\"[ \")} NR > 1 {printf(\"\\n ,\")}{printf(\" {device, %s, \\\"%s\\\", tdctrl}\", $4,$6)} END {printf(\" ].\\n\")}'",
   lager:debug("device command: " ++ CMD),
   Devs = os:cmd(CMD),
   lager:debug("device result: " ++ Devs),

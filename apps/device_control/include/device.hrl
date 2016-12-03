@@ -1,0 +1,1 @@
+-record(device, {id, name, cbmod}).
