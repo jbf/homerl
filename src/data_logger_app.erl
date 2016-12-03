@@ -11,8 +11,9 @@ start(_Type, _StartArgs) ->
     Dispatch = cowboy_router:compile([
         % {HostMatch, list({PathMatch, Handler, Opts})}
         {'_', [
-               {"/", sensor_index_handler, []},
-               {"/sensor", sensor_handler, []}
+               {"/", landing_handler, []},
+               {"/sensor", sensor_handler, []},
+               {"/device", device_handler, []}
               ]}
     ]),
     {ok, _} = cowboy:start_http(http_listener,

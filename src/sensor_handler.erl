@@ -13,10 +13,8 @@ init(_, Req, _Opts) ->
 
 handle(Req, State=#state{}) ->
         {QsVal, Req2} = cowboy_req:qs_val(<<"id">>, Req),
-	{ok, Req3} = cowboy_req:reply(200, [
-                {<<"content-type">>, <<"text/html; charset=utf-8">>},
-                {<<"server">>, <<"yaws">>}
-            ],
+	{ok, Req3} = cowboy_req:reply(200,
+            local_http_utils:headers(),
             [
                  "<html><head>",
                  include(),
