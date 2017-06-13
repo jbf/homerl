@@ -1,0 +1,16 @@
+Req = {
+       "https://SOME_HOST:443/value",
+       [],
+       "application/vnd.se.codehouse-hum+json",
+       <<"{\"sensor\":\"135\",\"type\":\"hum\",\"time\":\"1000203368\",\"value\":\"12.27\"}">>
+      }.
+
+SSLOpts = [
+            {certfile,"/home/jbf/client/newcert.pem" },
+            {keyfile,"/home/jbf/client/client_key.pem"},
+            {cacertfile, "/home/jbf/demoCA/cacert.pem"}
+          ].
+
+HTTPOpts = [{ssl, SSLOpts}].
+
+httpc:request(post,Req,HTTPOpts, []).
